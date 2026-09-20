@@ -56,7 +56,7 @@
       background: #ffffff;
       border: none;
       border-radius: 0;
-      padding: 12px 16px;
+      padding: 24px 16px 12px 16px; /* 노션 임베드 UI 가림 방지를 위해 상단 여백 확보 */
       box-shadow: none;
     }
 
@@ -769,14 +769,12 @@
       return scheduledCount > 0 ? Math.round((doneCount / scheduledCount) * 100) : 0;
     }
 
-    // 전체 루틴의 한 달 평균 달성률 계산 함수
     function calcOverallMonthlyRate() {
       if (habits.length === 0) return 0;
       const sum = habits.reduce((acc, h) => acc + calcMonthlyRate(h), 0);
       return Math.round(sum / habits.length);
     }
 
-    // Vercel Serverless Function(/api/notion)으로 동기화 요청을 전달하는 함수
     async function syncNotionDailyRecord(dateStr) {
       const completedNames = [];
       const uncompletedNames = [];
@@ -876,6 +874,7 @@
         habit.name = el.value;
         adjustInputWidth(el);
         saveHabits();
+        syncNotionDailyRecord(getDateStr(0));
       }
     }
 
@@ -897,14 +896,15 @@
       habits = habits.filter(h => !idsToDelete.includes(h.id));
       saveHabits();
       render();
+      syncNotionDailyRecord(getDateStr(0)); // 삭제된 내용 노션 연동 페이지에 자동 반영
     }
 
     function deleteAllHabits() {
-      if (confirm('모든 루틴을 삭제하시겠습니까?')) {
-        habits = [];
-        saveHabits();
-        render();
-      }
+      // 확인 팝업 없이 즉시 전체 삭제 및 노션 페이지 동기화
+      habits = [];
+      saveHabits();
+      render();
+      syncNotionDailyRecord(getDateStr(0));
     }
 
     function openModal() {
@@ -972,6 +972,7 @@
       saveHabits();
       closeModal();
       render();
+      syncNotionDailyRecord(getDateStr(0));
     }
 
     function getFreqText(habit) {
