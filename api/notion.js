@@ -3,7 +3,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { dateStr, completedNames, uncompletedNames } = req.body;
+  // req.body에서 monthlyRate(한 달 달성률)도 추가로 수신
+  const { dateStr, completedNames, uncompletedNames, monthlyRate } = req.body;
   const NOTION_API_KEY = process.env.NOTION_API_KEY;
   const DATABASE_ID = process.env.DATABASE_ID;
 
@@ -91,11 +92,18 @@ export default async function handler(req, res) {
     const queryData = await queryRes.json();
     const existingPage = queryData.results && queryData.results[0];
 
+    // 노션 DB 속성 설정 (기존 Rate 대신 Daily Rate / Monthly Rate 적용)
     const payloadProperties = {
       "Title": { title: [{ text: { content: pageTitle } }] },
       "Date": { date: { start: dateStr } },
-      "Rate": { number: dailyRateDecimal }
+      "Daily Rate": { number: dailyRateDecimal } // 새로운 일일 달성률 속성
     };
+
+    // monthlyRate 값이 전달된 경우 Monthly Rate 속성에 적용 (백분율 값 0~1로 변환)
+    if (monthlyRate !== undefined && monthlyRate !== null) {
+      const monthlyRateDecimal = monthlyRate > 1 ? monthlyRate / 100 : monthlyRate;
+      payloadProperties["Monthly Rate"] = { number: monthlyRateDecimal };
+    }
 
     if (existingPage) {
       // 2-1. 기존 페이지 수정
