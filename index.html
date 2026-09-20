@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notion Habit Tracker Widget</title>
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --card-bg: #ffffff;
+      --text-color: #404040;
+      --sub-text: #787774;
+      --border-color: #e9e9e8;
+      --btn-gray: #f0f0f0;
+      --btn-text: #555555;
+      --circle-empty: #e8e8e7;
+      --cb-checked-bg: #e5e5e3;
+      --cb-checked-border: #cccccc;
+      --routine-text: #63605a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #ffffff;
+        --card-bg: #ffffff;
+        --text-color: #404040;
+        --sub-text: #787774;
+        --border-color: #e9e9e8;
+        --btn-gray: #f0f0f0;
+        --btn-text: #555555;
+        --circle-empty: #e8e8e7;
+        --cb-checked-bg: #e5e5e3;
+        --cb-checked-border: #cccccc;
+        --routine-text: #63605a;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
+    }
+
+    html, body {
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tracker-container {
+      width: 100%;
+      max-width: 100%;
+      background: #ffffff;
+      border: none;
+      border-radius: 0;
+      padding: 12px 16px;
+      box-shadow: none;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--text-color);
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      border-radius: 4px;
+      color: var(--sub-text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--border-color);
+      color: var(--text-color);
+    }
+
+    .delete-mode .icon-btn {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .view-toggle {
+      display: flex;
+      background: var(--border-color);
+      padding: 2px;
+      border-radius: 8px;
+    }
+
+    .view-btn {
+      border: none;
+      background: transparent;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--sub-text);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .view-btn.active {
+      background: var(--bg-color);
+      color: var(--text-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .delete-bar {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.18);
+      border-radius: 8px;
+      margin-bottom: 14px;
+      font-size: 0.82rem;
+      color: var(--text-color);
+      font-weight: 500;
+    }
+
+    .delete-bar.active {
+      display: flex;
+    }
+
+    .delete-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn {
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-danger-all {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-danger-all:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.85);
+      color: white;
+      padding: 4px 7px;
+    }
+
+    .btn-danger:hover {
+      background: #ef4444;
+    }
+
+    .habit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .habit-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .habit-list::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .habit-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-color);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      gap: 6px;
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    }
+
+    .delete-mode .habit-item {
+      cursor: pointer;
+    }
+
+    .habit-item:active {
+      cursor: grabbing;
+    }
+
+    .habit-item.dragging {
+      opacity: 0.4;
+    }
+
+    .habit-item.off-day {
+      opacity: 0.55;
+      background: rgba(0,0,0,0.02);
+    }
+
+    .delete-mode .habit-item.off-day {
+      opacity: 1;
+      background: var(--bg-color);
+    }
+
+    .habit-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .select-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #ef4444;
+    }
+
+    .checkbox-container {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .custom-cb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid #cccccc;
+      border-radius: 0px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+
+    .custom-cb:checked {
+      background-color: var(--cb-checked-bg);
+      border-color: var(--cb-checked-border);
+    }
+
+    .custom-cb:checked::after {
+      content: '';
+      position: absolute;
+      width: 3px;
+      height: 7px;
+      border: solid #555555;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      top: 2px;
+      left: 5px;
+    }
+
+    .off-day-mark {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--border-color);
+      border-radius: 0px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .habit-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .habit-name {
+      font-size: 0.78rem;
+      font-weight: 400;
+      border: none;
+      background: transparent;
+      color: var(--routine-text);
+      outline: none;
+      white-space: nowrap;
+      padding: 0;
+      width: auto;
+    }
+
+    .freq-tag {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--sub-text);
+      background: var(--btn-gray);
+      border: 1px solid var(--border-color);
+      padding: 1px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+
+    .streak-badge {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--sub-text);
+      white-space: nowrap;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+
+    .progress-dots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      align-items: center;
+      justify-content: flex-start;
+      width: 88px;
+      flex-shrink: 0;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: var(--circle-empty);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.15s, background-color 0.2s;
+    }
+
+    .dot:hover {
+      transform: scale(1.3);
+    }
+
+    .add-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px;
+      border: 1px dashed var(--border-color);
+      background: transparent;
+      color: var(--sub-text);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .add-btn:hover {
+      background: var(--border-color);
+      color: var(--text-color);
+    }
+
+    .delete-mode .add-btn {
+      display: none;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-color);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 340px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal-header {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-color);
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--sub-text);
+      margin-bottom: 5px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: var(--bg-color);
+      color: var(--text-color);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .radio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .radio-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--text-color);
+      transition: background 0.15s;
+    }
+
+    .radio-card:hover {
+      background: var(--card-bg);
+    }
+
+    .custom-radio {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 13px;
+      height: 13px;
+      border: 1.5px solid #aaa;
+      border-radius: 50%;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .custom-radio:checked {
+      border-color: #555555;
+    }
+
+    .custom-radio:checked::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background-color: #555555;
+      border-radius: 50%;
+    }
+
+    .days-picker {
+      display: none;
+      gap: 3px;
+      margin-top: 8px;
+    }
+
+    .days-picker.active {
+      display: flex;
+    }
+
+    .day-btn {
+      flex: 1;
+      padding: 4px 0;
+      font-size: 0.72rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .day-btn.selected {
+      background: #555555;
+      color: white;
+      border-color: #555555;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .submit-btn {
+      padding: 5px 12px;
+      background: var(--btn-gray);
+      color: var(--btn-text);
+      border: none;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .submit-btn:hover {
+      background: #e2e2e2;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tracker-container" id="trackerApp">
+    <div class="header">
+      <div class="header-left">
+        <div class="title">Habit Tracker</div>
+        <button class="icon-btn" id="trashToggleBtn" onclick="toggleDeleteMode(event)" title="삭제 모드">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="weeklyBtn" onclick="switchView('weekly')">Weekly</button>
+        <button class="view-btn" id="monthlyBtn" onclick="switchView('monthly')">Monthly</button>
+      </div>
+    </div>
+
+    <div class="delete-bar" id="deleteBar">
+      <span id="selectedCountText">0 개 선택됨</span>
+      <div class="delete-actions">
+        <button class="action-btn btn-danger-all" onclick="deleteAllHabits()">전체 삭제</button>
+        <button class="action-btn btn-danger" onclick="deleteSelectedHabits()" title="선택 삭제">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="habit-list" id="habitList"></div>
+
+    <button class="add-btn" id="addBtn" onclick="openModal()">+ add</button>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">새 루틴 추가</div>
+      
+      <div class="form-group">
+        <label class="form-label">루틴 이름</label>
+        <input type="text" class="form-input" id="routineNameInput" placeholder="예: 매일 운동하기" autofocus />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">루틴 주기 설정</label>
+        <div class="radio-grid">
+          <label class="radio-card">
+            <input type="radio" name="freq" value="daily" class="custom-radio" checked onchange="toggleDayPicker()" />
+            <span>매일</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="freq" value="weekdays" class="custom-radio" onchange="toggleDayPicker()" />
+            <span>평일</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="freq" value="weekends" class="custom-radio" onchange="toggleDayPicker()" />
+            <span>주말</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="freq" value="custom" class="custom-radio" onchange="toggleDayPicker()" />
+            <span>요일 선택</span>
+          </label>
+        </div>
+
+        <div class="days-picker" id="daysPicker">
+          <button type="button" class="day-btn selected" data-day="1" onclick="toggleCustomDay(1, this)">월</button>
+          <button type="button" class="day-btn selected" data-day="2" onclick="toggleCustomDay(2, this)">화</button>
+          <button type="button" class="day-btn selected" data-day="3" onclick="toggleCustomDay(3, this)">수</button>
+          <button type="button" class="day-btn selected" data-day="4" onclick="toggleCustomDay(4, this)">목</button>
+          <button type="button" class="day-btn selected" data-day="5" onclick="toggleCustomDay(5, this)">금</button>
+          <button type="button" class="day-btn" data-day="6" onclick="toggleCustomDay(6, this)">토</button>
+          <button type="button" class="day-btn" data-day="0" onclick="toggleCustomDay(0, this)">일</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="submit-btn" onclick="submitModal()">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentView = 'weekly';
+    let isDeleteMode = false;
+    let customDaysSelected = [1, 2, 3, 4, 5];
+
+    let habits = JSON.parse(localStorage.getItem('notion_habits_v2')) || [
+      { id: 1, name: '독서하기', freqType: 'daily', customDays: [], history: {} },
+      { id: 2, name: '운동하기', freqType: 'weekdays', customDays: [], history: {} },
+      { id: 3, name: '주말 산책', freqType: 'weekends', customDays: [], history: {} }
+    ];
+
+    function formatDateStr(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getDateStr(offsetDays = 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      return formatDateStr(d);
+    }
+
+    function getDayOfWeek(dateStr) {
+      const parts = dateStr.split('-');
+      return new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+    }
+
+    function normalizeHabitFreq(habit) {
+      if (habit.freqType === 'custom' && habit.customDays) {
+        const sorted = [...habit.customDays].sort((a, b) => a - b);
+        const str = JSON.stringify(sorted);
+        if (str === JSON.stringify([1, 2, 3, 4, 5])) {
+          habit.freqType = 'weekdays';
+          habit.customDays = [];
+        } else if (str === JSON.stringify([0, 6])) {
+          habit.freqType = 'weekends';
+          habit.customDays = [];
+        } else if (sorted.length === 7) {
+          habit.freqType = 'daily';
+          habit.customDays = [];
+        }
+      }
+    }
+
+    function saveHabits() {
+      habits.forEach(normalizeHabitFreq);
+      localStorage.setItem('notion_habits_v2', JSON.stringify(habits));
+    }
+
+    function isScheduledOnDate(habit, dateStr) {
+      normalizeHabitFreq(habit);
+      const day = getDayOfWeek(dateStr);
+      if (habit.freqType === 'daily') return true;
+      if (habit.freqType === 'weekdays') return day >= 1 && day <= 5;
+      if (habit.freqType === 'weekends') return day === 0 || day === 6;
+      if (habit.freqType === 'custom') return habit.customDays && habit.customDays.includes(day);
+      return true;
+    }
+
+    function getDatesForView(view) {
+      const now = new Date();
+      const dates = [];
+
+      if (view === 'weekly') {
+        const day = now.getDay();
+        const distToMonday = day === 0 ? -6 : 1 - day;
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + distToMonday);
+
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+          dates.push(formatDateStr(d));
+        }
+      } else if (view === 'monthly') {
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+
+        for (let dayNum = 1; dayNum <= lastDay; dayNum++) {
+          const d = new Date(year, month, dayNum);
+          dates.push(formatDateStr(d));
+        }
+      }
+      return dates;
+    }
+
+    function calcStreak(habit) {
+      let streak = 0;
+      let d = 0;
+      while (true) {
+        const dateStr = getDateStr(-d);
+        if (isScheduledOnDate(habit, dateStr)) {
+          if (habit.history[dateStr]) {
+            streak++;
+          } else {
+            if (d !== 0) break;
+          }
+        }
+        d++;
+        if (d > 365) break;
+      }
+      return streak;
+    }
+
+    function calcMonthlyRate(habit) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const todayNum = now.getDate();
+      
+      let scheduledCount = 0;
+      let doneCount = 0;
+
+      for (let d = 1; d <= todayNum; d++) {
+        const dateObj = new Date(year, month, d);
+        const dateStr = formatDateStr(dateObj);
+        if (isScheduledOnDate(habit, dateStr)) {
+          scheduledCount++;
+          if (habit.history[dateStr]) {
+            doneCount++;
+          }
+        }
+      }
+      return scheduledCount > 0 ? Math.round((doneCount / scheduledCount) * 100) : 0;
+    }
+
+    // Vercel Serverless Function(/api/notion)으로 동기화 요청을 전달하는 함수
+    async function syncNotionDailyRecord(dateStr) {
+      const completedNames = [];
+      const uncompletedNames = [];
+
+      habits.forEach(habit => {
+        if (isScheduledOnDate(habit, dateStr)) {
+          if (habit.history[dateStr]) {
+            completedNames.push(habit.name);
+          } else {
+            uncompletedNames.push(habit.name);
+          }
+        }
+      });
+
+      try {
+        await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dateStr,
+            completedNames,
+            uncompletedNames
+          })
+        });
+      } catch (err) {
+        console.error("Notion Sync Error:", err);
+      }
+    }
+
+    function toggleTodayHabit(id) {
+      const habit = habits.find(h => h.id === id);
+      if (habit) {
+        const today = getDateStr(0);
+        habit.history[today] = !habit.history[today];
+        saveHabits();
+        render();
+        syncNotionDailyRecord(today);
+      }
+    }
+
+    function toggleHabitByDate(id, dateStr, e) {
+      if (e) e.stopPropagation();
+      if (isDeleteMode) return;
+      const habit = habits.find(h => h.id === id);
+      if (habit) {
+        if (!isScheduledOnDate(habit, dateStr)) return;
+        habit.history[dateStr] = !habit.history[dateStr];
+        saveHabits();
+        render();
+        syncNotionDailyRecord(dateStr);
+      }
+    }
+
+    function switchView(view) {
+      currentView = view;
+      document.getElementById('weeklyBtn').classList.toggle('active', view === 'weekly');
+      document.getElementById('monthlyBtn').classList.toggle('active', view === 'monthly');
+      render();
+    }
+
+    function toggleDeleteMode(e) {
+      if (e) e.stopPropagation();
+      isDeleteMode = !isDeleteMode;
+      document.getElementById('trackerApp').classList.toggle('delete-mode', isDeleteMode);
+      document.getElementById('deleteBar').classList.toggle('active', isDeleteMode);
+      render();
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!isDeleteMode) return;
+      const isHabitItem = e.target.closest('.habit-item');
+      const isDeleteBar = e.target.closest('#deleteBar');
+      const isTrashBtn = e.target.closest('#trashToggleBtn');
+
+      if (!isHabitItem && !isDeleteBar && !isTrashBtn) {
+        isDeleteMode = false;
+        document.getElementById('trackerApp').classList.remove('delete-mode');
+        document.getElementById('deleteBar').classList.remove('active');
+        render();
+      }
+    });
+
+    function updateSelectedCount() {
+      const selectedCount = document.querySelectorAll('.select-checkbox:checked').length;
+      const countText = document.getElementById('selectedCountText');
+      if (countText) {
+        countText.textContent = `${selectedCount} 개 선택됨`;
+      }
+    }
+
+    function updateHabitName(id, el) {
+      const habit = habits.find(h => h.id === id);
+      if (habit) {
+        habit.name = el.value;
+        adjustInputWidth(el);
+        saveHabits();
+      }
+    }
+
+    function adjustInputWidth(el) {
+      if (!el) return;
+      const canvas = adjustInputWidth.canvas || (adjustInputWidth.canvas = document.createElement("canvas"));
+      const context = canvas.getContext("2d");
+      const style = window.getComputedStyle(el);
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const metrics = context.measureText(el.value || el.placeholder || '');
+      el.style.width = Math.ceil(metrics.width + 4) + 'px';
+    }
+
+    function deleteSelectedHabits() {
+      const selected = document.querySelectorAll('.select-checkbox:checked');
+      const idsToDelete = Array.from(selected).map(cb => parseInt(cb.dataset.id));
+      if (idsToDelete.length === 0) return;
+      
+      habits = habits.filter(h => !idsToDelete.includes(h.id));
+      saveHabits();
+      render();
+    }
+
+    function deleteAllHabits() {
+      if (confirm('모든 루틴을 삭제하시겠습니까?')) {
+        habits = [];
+        saveHabits();
+        render();
+      }
+    }
+
+    function openModal() {
+      document.getElementById('routineNameInput').value = '';
+      customDaysSelected = [1, 2, 3, 4, 5];
+      document.querySelectorAll('.day-btn').forEach(btn => {
+        const day = parseInt(btn.dataset.day);
+        btn.classList.toggle('selected', customDaysSelected.includes(day));
+      });
+      document.getElementById('modalBackdrop').classList.add('active');
+      document.getElementById('routineNameInput').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('modalBackdrop').classList.remove('active');
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === 'modalBackdrop') {
+        const name = document.getElementById('routineNameInput').value.trim();
+        if (name) {
+          submitModal();
+        } else {
+          closeModal();
+        }
+      }
+    }
+
+    function toggleDayPicker() {
+      const freq = document.querySelector('input[name="freq"]:checked').value;
+      const picker = document.getElementById('daysPicker');
+      picker.classList.toggle('active', freq === 'custom');
+    }
+
+    function toggleCustomDay(day, btn) {
+      btn.classList.toggle('selected');
+      if (customDaysSelected.includes(day)) {
+        customDaysSelected = customDaysSelected.filter(d => d !== day);
+      } else {
+        customDaysSelected.push(day);
+      }
+    }
+
+    function submitModal() {
+      const nameInput = document.getElementById('routineNameInput');
+      const name = nameInput.value.trim();
+      if (!name) {
+        closeModal();
+        return;
+      }
+
+      let freqType = document.querySelector('input[name="freq"]:checked').value;
+      let customDays = freqType === 'custom' ? [...customDaysSelected] : [];
+
+      const newHabit = {
+        id: Date.now(),
+        name: name,
+        freqType: freqType,
+        customDays: customDays,
+        history: {}
+      };
+
+      normalizeHabitFreq(newHabit);
+      habits.push(newHabit);
+      saveHabits();
+      closeModal();
+      render();
+    }
+
+    function getFreqText(habit) {
+      normalizeHabitFreq(habit);
+      if (habit.freqType === 'daily') return '매일';
+      if (habit.freqType === 'weekdays') return '평일';
+      if (habit.freqType === 'weekends') return '주말';
+      if (habit.freqType === 'custom') {
+        const daysMap = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금', 6:'토', 0:'일'};
+        return habit.customDays.sort().map(d => daysMap[d]).join('/');
+      }
+      return '';
+    }
+
+    let draggedIndex = null;
+
+    function handleDragStart(e, index) {
+      if (isDeleteMode) return;
+      draggedIndex = index;
+      e.target.classList.add('dragging');
+    }
+
+    function handleDragOver(e) {
+      if (isDeleteMode) return;
+      e.preventDefault();
+    }
+
+    function handleDrop(e, index) {
+      if (isDeleteMode) return;
+      e.preventDefault();
+      if (draggedIndex !== null && draggedIndex !== index) {
+        const movedItem = habits.splice(draggedIndex, 1)[0];
+        habits.splice(index, 0, movedItem);
+        saveHabits();
+        render();
+      }
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+      draggedIndex = null;
+    }
+
+    function render() {
+      const listEl = document.getElementById('habitList');
+      listEl.innerHTML = '';
+
+      const dates = getDatesForView(currentView);
+      const todayStr = getDateStr(0);
+
+      const rainbowPalette = [
+        '#FFB3BA',
+        '#FFDFBA',
+        '#FFFFBA',
+        '#BAFFC9',
+        '#BAE1FF',
+        '#C9C2FF',
+        '#F0C2FF'
+      ];
+
+      habits.forEach((habit, idx) => {
+        normalizeHabitFreq(habit);
+        const item = document.createElement('div');
+        const isScheduledToday = isScheduledOnDate(habit, todayStr);
+        item.className = `habit-item ${!isScheduledToday ? 'off-day' : ''}`;
+        item.draggable = !isDeleteMode;
+
+        if (!isDeleteMode) {
+          item.addEventListener('dragstart', (e) => handleDragStart(e, idx));
+          item.addEventListener('dragover', handleDragOver);
+          item.addEventListener('drop', (e) => handleDrop(e, idx));
+          item.addEventListener('dragend', handleDragEnd);
+        } else {
+          item.addEventListener('click', (e) => {
+            const cb = item.querySelector('.select-checkbox');
+            if (cb && e.target !== cb) {
+              cb.checked = !cb.checked;
+              updateSelectedCount();
+            }
+          });
+        }
+
+        let dotsHtml = '';
+        dates.forEach((dateStr, i) => {
+          const scheduled = isScheduledOnDate(habit, dateStr);
+          const isDone = habit.history[dateStr];
+
+          const visualOrder = i % 7;
+          const hexColor = rainbowPalette[visualOrder];
+
+          let styleAttr = '';
+          if (scheduled && isDone) {
+            styleAttr = `style="background-color: ${hexColor};"`;
+          }
+
+          dotsHtml += `<div class="dot" ${styleAttr} title="${dateStr}" onclick="toggleHabitByDate(${habit.id}, '${dateStr}', event)"></div>`;
+        });
+
+        const streak = calcStreak(habit);
+        const monthlyRate = calcMonthlyRate(habit);
+        const freqText = getFreqText(habit);
+
+        const badgeText = currentView === 'weekly' ? `${streak}일` : `${monthlyRate}%`;
+
+        const cbHtml = isDeleteMode
+          ? `<input type="checkbox" class="select-checkbox" data-id="${habit.id}" onchange="updateSelectedCount()">`
+          : (isScheduledToday 
+              ? `<div class="checkbox-container">
+                   <input type="checkbox" class="custom-cb" ${habit.history[todayStr] ? 'checked' : ''} onchange="toggleTodayHabit(${habit.id})">
+                 </div>`
+              : `<div class="off-day-mark" title="오늘 해당 없음"></div>`);
+
+        item.innerHTML = `
+          <div class="habit-left">
+            ${cbHtml}
+            <div class="habit-info">
+              <input type="text" class="habit-name" value="${habit.name}" oninput="adjustInputWidth(this)" onchange="updateHabitName(${habit.id}, this)">
+              <span class="freq-tag">${freqText}</span>
+            </div>
+          </div>
+          <div class="streak-badge">${badgeText}</div>
+          <div class="progress-dots">${dotsHtml}</div>
+        `;
+
+        listEl.appendChild(item);
+
+        const inputEl = item.querySelector('.habit-name');
+        if (inputEl) adjustInputWidth(inputEl);
+      });
+
+      updateSelectedCount();
+    }
+
+    render();
+  </script>
+</body>
+</html>
