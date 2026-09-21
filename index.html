@@ -216,9 +216,11 @@
       font-size: 0.82rem;
       font-weight: 600;
       color: var(--sub-text);
-      border-bottom: 1.5px solid var(--border-color);
       padding-bottom: 4px;
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .habit-item {
@@ -371,13 +373,13 @@
       gap: 3px;
       align-items: center;
       justify-content: flex-start;
-      width: 88px;
+      width: 105px;
       flex-shrink: 0;
     }
 
     .dot {
-      width: 9px;
-      height: 9px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background-color: var(--circle-empty);
       cursor: pointer;
@@ -1131,6 +1133,12 @@
         '#F0C2FF'
       ];
 
+      const categoryIcons = {
+        'Morning': `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20"/><path d="M8 18a4 4 0 0 1 8 0"/><path d="M12 10V8"/><path d="m4.93 10.93 1.41 1.41"/><path d="m19.07 10.93-1.41 1.41"/></svg>`,
+        'Afternoon': `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+        'Evening': `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`
+      };
+
       const categories = ['Morning', 'Afternoon', 'Evening'];
 
       categories.forEach(category => {
@@ -1142,7 +1150,7 @@
 
         const categoryTitle = document.createElement('div');
         categoryTitle.className = 'category-title';
-        categoryTitle.textContent = category;
+        categoryTitle.innerHTML = `${categoryIcons[category] || ''} <span>${category}</span>`;
         categoryGroup.appendChild(categoryTitle);
 
         const categoryHabits = habits.filter(h => (h.category || 'Morning') === category);
