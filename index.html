@@ -190,7 +190,7 @@
     .habit-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
       max-height: 480px;
       overflow-y: auto;
       padding-right: 2px;
@@ -205,6 +205,22 @@
       border-radius: 4px;
     }
 
+    .category-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 32px;
+    }
+
+    .category-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--sub-text);
+      border-bottom: 1.5px solid var(--border-color);
+      padding-bottom: 4px;
+      margin-bottom: 2px;
+    }
+
     .habit-item {
       display: flex;
       align-items: center;
@@ -214,7 +230,7 @@
       border-radius: 8px;
       border: 1px solid var(--border-color);
       gap: 6px;
-      cursor: grab;
+      cursor: pointer;
       user-select: none;
       transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
     }
@@ -319,13 +335,10 @@
     .habit-name {
       font-size: 0.78rem;
       font-weight: 400;
-      border: none;
-      background: transparent;
       color: var(--routine-text);
-      outline: none;
       white-space: nowrap;
-      padding: 0;
-      width: auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .freq-tag {
@@ -464,6 +477,12 @@
       gap: 6px;
     }
 
+    .radio-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
     .radio-card {
       display: flex;
       align-items: center;
@@ -597,11 +616,29 @@
 
   <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
     <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">새 루틴 추가</div>
+      <div class="modal-header" id="modalTitle">새 루틴 추가</div>
       
       <div class="form-group">
         <label class="form-label">루틴 이름</label>
         <input type="text" class="form-input" id="routineNameInput" placeholder="예: 매일 운동하기" autofocus />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">시간대 (카테고리)</label>
+        <div class="radio-grid-3">
+          <label class="radio-card">
+            <input type="radio" name="category" value="Morning" class="custom-radio" checked />
+            <span>Morning</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="category" value="Afternoon" class="custom-radio" />
+            <span>Afternoon</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="category" value="Evening" class="custom-radio" />
+            <span>Evening</span>
+          </label>
+        </div>
       </div>
 
       <div class="form-group">
@@ -637,7 +674,7 @@
       </div>
 
       <div class="modal-footer">
-        <button class="submit-btn" onclick="submitModal()">추가</button>
+        <button class="submit-btn" id="modalSubmitBtn" onclick="submitModal()">추가</button>
       </div>
     </div>
   </div>
@@ -646,11 +683,12 @@
     let currentView = 'weekly';
     let isDeleteMode = false;
     let customDaysSelected = [1, 2, 3, 4, 5];
+    let editingHabitId = null;
 
     let habits = JSON.parse(localStorage.getItem('notion_habits_v2')) || [
-      { id: 1, name: '독서하기', freqType: 'daily', customDays: [], history: {} },
-      { id: 2, name: '운동하기', freqType: 'weekdays', customDays: [], history: {} },
-      { id: 3, name: '주말 산책', freqType: 'weekends', customDays: [], history: {} }
+      { id: 1, name: '독서하기', category: 'Morning', freqType: 'daily', customDays: [], history: {} },
+      { id: 2, name: '운동하기', category: 'Afternoon', freqType: 'weekdays', customDays: [], history: {} },
+      { id: 3, name: '주말 산책', category: 'Evening', freqType: 'weekends', customDays: [], history: {} }
     ];
 
     function formatDateStr(d) {
@@ -672,6 +710,7 @@
     }
 
     function normalizeHabitFreq(habit) {
+      if (!habit.category) habit.category = 'Morning';
       if (habit.freqType === 'custom' && habit.customDays) {
         const sorted = [...habit.customDays].sort((a, b) => a - b);
         const str = JSON.stringify(sorted);
@@ -809,7 +848,8 @@
       }
     }
 
-    function toggleTodayHabit(id) {
+    function toggleTodayHabit(id, e) {
+      if (e) e.stopPropagation();
       const habit = habits.find(h => h.id === id);
       if (habit) {
         const today = getDateStr(0);
@@ -870,26 +910,6 @@
       }
     }
 
-    function updateHabitName(id, el) {
-      const habit = habits.find(h => h.id === id);
-      if (habit) {
-        habit.name = el.value;
-        adjustInputWidth(el);
-        saveHabits();
-        syncNotionDailyRecord(getDateStr(0));
-      }
-    }
-
-    function adjustInputWidth(el) {
-      if (!el) return;
-      const canvas = adjustInputWidth.canvas || (adjustInputWidth.canvas = document.createElement("canvas"));
-      const context = canvas.getContext("2d");
-      const style = window.getComputedStyle(el);
-      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      const metrics = context.measureText(el.value || el.placeholder || '');
-      el.style.width = Math.ceil(metrics.width + 4) + 'px';
-    }
-
     function deleteSelectedHabits() {
       const selected = document.querySelectorAll('.select-checkbox:checked');
       const idsToDelete = Array.from(selected).map(cb => parseInt(cb.dataset.id));
@@ -908,13 +928,43 @@
       syncNotionDailyRecord(getDateStr(0));
     }
 
-    function openModal() {
-      document.getElementById('routineNameInput').value = '';
-      customDaysSelected = [1, 2, 3, 4, 5];
+    function openModal(habitId = null) {
+      editingHabitId = habitId;
+      const titleEl = document.getElementById('modalTitle');
+      const submitBtn = document.getElementById('modalSubmitBtn');
+
+      if (editingHabitId) {
+        const habit = habits.find(h => h.id === editingHabitId);
+        if (!habit) return;
+        titleEl.textContent = '루틴 수정';
+        submitBtn.textContent = '수정';
+        document.getElementById('routineNameInput').value = habit.name;
+
+        const catRadio = document.querySelector(`input[name="category"][value="${habit.category || 'Morning'}"]`);
+        if (catRadio) catRadio.checked = true;
+
+        const freqRadio = document.querySelector(`input[name="freq"][value="${habit.freqType}"]`);
+        if (freqRadio) freqRadio.checked = true;
+
+        customDaysSelected = habit.customDays ? [...habit.customDays] : [1, 2, 3, 4, 5];
+        toggleDayPicker();
+      } else {
+        titleEl.textContent = '새 루틴 추가';
+        submitBtn.textContent = '추가';
+        document.getElementById('routineNameInput').value = '';
+        const defaultCat = document.querySelector('input[name="category"][value="Morning"]');
+        if (defaultCat) defaultCat.checked = true;
+        const defaultFreq = document.querySelector('input[name="freq"][value="daily"]');
+        if (defaultFreq) defaultFreq.checked = true;
+        customDaysSelected = [1, 2, 3, 4, 5];
+        toggleDayPicker();
+      }
+
       document.querySelectorAll('.day-btn').forEach(btn => {
         const day = parseInt(btn.dataset.day);
         btn.classList.toggle('selected', customDaysSelected.includes(day));
       });
+
       document.getElementById('modalBackdrop').classList.add('active');
       document.getElementById('routineNameInput').focus();
     }
@@ -957,19 +1007,32 @@
         return;
       }
 
+      let category = document.querySelector('input[name="category"]:checked')?.value || 'Morning';
       let freqType = document.querySelector('input[name="freq"]:checked').value;
       let customDays = freqType === 'custom' ? [...customDaysSelected] : [];
 
-      const newHabit = {
-        id: Date.now(),
-        name: name,
-        freqType: freqType,
-        customDays: customDays,
-        history: {}
-      };
+      if (editingHabitId) {
+        const habit = habits.find(h => h.id === editingHabitId);
+        if (habit) {
+          habit.name = name;
+          habit.category = category;
+          habit.freqType = freqType;
+          habit.customDays = customDays;
+          normalizeHabitFreq(habit);
+        }
+      } else {
+        const newHabit = {
+          id: Date.now(),
+          name: name,
+          category: category,
+          freqType: freqType,
+          customDays: customDays,
+          history: {}
+        };
+        normalizeHabitFreq(newHabit);
+        habits.push(newHabit);
+      }
 
-      normalizeHabitFreq(newHabit);
-      habits.push(newHabit);
       saveHabits();
       closeModal();
       render();
@@ -988,11 +1051,11 @@
       return '';
     }
 
-    let draggedIndex = null;
+    let draggedHabitId = null;
 
-    function handleDragStart(e, index) {
+    function handleDragStart(e, habitId) {
       if (isDeleteMode) return;
-      draggedIndex = index;
+      draggedHabitId = habitId;
       e.target.classList.add('dragging');
     }
 
@@ -1001,20 +1064,54 @@
       e.preventDefault();
     }
 
-    function handleDrop(e, index) {
-      if (isDeleteMode) return;
+    function handleCategoryDrop(e, targetCategory) {
+      if (isDeleteMode || draggedHabitId === null) return;
       e.preventDefault();
-      if (draggedIndex !== null && draggedIndex !== index) {
-        const movedItem = habits.splice(draggedIndex, 1)[0];
-        habits.splice(index, 0, movedItem);
-        saveHabits();
-        render();
+      e.stopPropagation();
+
+      const habitIndex = habits.findIndex(h => h.id === draggedHabitId);
+      if (habitIndex === -1) return;
+
+      const [draggedHabit] = habits.splice(habitIndex, 1);
+      draggedHabit.category = targetCategory;
+
+      const targetHabitItem = e.target.closest('.habit-item');
+      if (targetHabitItem) {
+        const targetId = parseInt(targetHabitItem.dataset.id);
+        const targetIndex = habits.findIndex(h => h.id === targetId);
+        if (targetIndex !== -1) {
+          habits.splice(targetIndex, 0, draggedHabit);
+        } else {
+          habits.push(draggedHabit);
+        }
+      } else {
+        habits.push(draggedHabit);
       }
+
+      saveHabits();
+      render();
     }
 
     function handleDragEnd(e) {
       e.target.classList.remove('dragging');
-      draggedIndex = null;
+      draggedHabitId = null;
+    }
+
+    function handleHabitClick(e, habit) {
+      if (isDeleteMode) {
+        const cb = e.currentTarget.querySelector('.select-checkbox');
+        if (cb && e.target !== cb) {
+          cb.checked = !cb.checked;
+          updateSelectedCount();
+        }
+        return;
+      }
+
+      if (e.target.closest('.dot') || e.target.closest('.custom-cb') || e.target.closest('.checkbox-container') || e.target.closest('.select-checkbox')) {
+        return;
+      }
+
+      openModal(habit.id);
     }
 
     function render() {
@@ -1034,74 +1131,85 @@
         '#F0C2FF'
       ];
 
-      habits.forEach((habit, idx) => {
-        normalizeHabitFreq(habit);
-        const item = document.createElement('div');
-        const isScheduledToday = isScheduledOnDate(habit, todayStr);
-        item.className = `habit-item ${!isScheduledToday ? 'off-day' : ''}`;
-        item.draggable = !isDeleteMode;
+      const categories = ['Morning', 'Afternoon', 'Evening'];
 
-        if (!isDeleteMode) {
-          item.addEventListener('dragstart', (e) => handleDragStart(e, idx));
-          item.addEventListener('dragover', handleDragOver);
-          item.addEventListener('drop', (e) => handleDrop(e, idx));
-          item.addEventListener('dragend', handleDragEnd);
-        } else {
-          item.addEventListener('click', (e) => {
-            const cb = item.querySelector('.select-checkbox');
-            if (cb && e.target !== cb) {
-              cb.checked = !cb.checked;
-              updateSelectedCount();
-            }
-          });
-        }
+      categories.forEach(category => {
+        const categoryGroup = document.createElement('div');
+        categoryGroup.className = 'category-group';
+        categoryGroup.dataset.category = category;
+        categoryGroup.addEventListener('dragover', handleDragOver);
+        categoryGroup.addEventListener('drop', (e) => handleCategoryDrop(e, category));
 
-        let dotsHtml = '';
-        dates.forEach((dateStr, i) => {
-          const scheduled = isScheduledOnDate(habit, dateStr);
-          const isDone = habit.history[dateStr];
+        const categoryTitle = document.createElement('div');
+        categoryTitle.className = 'category-title';
+        categoryTitle.textContent = category;
+        categoryGroup.appendChild(categoryTitle);
 
-          const visualOrder = i % 7;
-          const hexColor = rainbowPalette[visualOrder];
+        const categoryHabits = habits.filter(h => (h.category || 'Morning') === category);
 
-          let styleAttr = '';
-          if (scheduled && isDone) {
-            styleAttr = `style="background-color: ${hexColor};"`;
+        categoryHabits.forEach((habit) => {
+          normalizeHabitFreq(habit);
+          const item = document.createElement('div');
+          const isScheduledToday = isScheduledOnDate(habit, todayStr);
+          item.className = `habit-item ${!isScheduledToday ? 'off-day' : ''}`;
+          item.dataset.id = habit.id;
+          item.draggable = !isDeleteMode;
+
+          item.addEventListener('click', (e) => handleHabitClick(e, habit));
+
+          if (!isDeleteMode) {
+            item.addEventListener('dragstart', (e) => handleDragStart(e, habit.id));
+            item.addEventListener('dragover', handleDragOver);
+            item.addEventListener('drop', (e) => handleCategoryDrop(e, category));
+            item.addEventListener('dragend', handleDragEnd);
           }
 
-          dotsHtml += `<div class="dot" ${styleAttr} title="${dateStr}" onclick="toggleHabitByDate(${habit.id}, '${dateStr}', event)"></div>`;
+          let dotsHtml = '';
+          dates.forEach((dateStr, i) => {
+            const scheduled = isScheduledOnDate(habit, dateStr);
+            const isDone = habit.history[dateStr];
+
+            const visualOrder = i % 7;
+            const hexColor = rainbowPalette[visualOrder];
+
+            let styleAttr = '';
+            if (scheduled && isDone) {
+              styleAttr = `style="background-color: ${hexColor};"`;
+            }
+
+            dotsHtml += `<div class="dot" ${styleAttr} title="${dateStr}" onclick="toggleHabitByDate(${habit.id}, '${dateStr}', event)"></div>`;
+          });
+
+          const streak = calcStreak(habit);
+          const monthlyRate = calcMonthlyRate(habit);
+          const freqText = getFreqText(habit);
+
+          const badgeText = currentView === 'weekly' ? `${streak}일` : `${monthlyRate}%`;
+
+          const cbHtml = isDeleteMode
+            ? `<input type="checkbox" class="select-checkbox" data-id="${habit.id}" onchange="updateSelectedCount()">`
+            : (isScheduledToday 
+                ? `<div class="checkbox-container">
+                     <input type="checkbox" class="custom-cb" ${habit.history[todayStr] ? 'checked' : ''} onchange="toggleTodayHabit(${habit.id}, event)">
+                   </div>`
+                : `<div class="off-day-mark" title="오늘 해당 없음"></div>`);
+
+          item.innerHTML = `
+            <div class="habit-left">
+              ${cbHtml}
+              <div class="habit-info">
+                <span class="habit-name">${habit.name}</span>
+                <span class="freq-tag">${freqText}</span>
+              </div>
+            </div>
+            <div class="streak-badge">${badgeText}</div>
+            <div class="progress-dots">${dotsHtml}</div>
+          `;
+
+          categoryGroup.appendChild(item);
         });
 
-        const streak = calcStreak(habit);
-        const monthlyRate = calcMonthlyRate(habit);
-        const freqText = getFreqText(habit);
-
-        const badgeText = currentView === 'weekly' ? `${streak}일` : `${monthlyRate}%`;
-
-        const cbHtml = isDeleteMode
-          ? `<input type="checkbox" class="select-checkbox" data-id="${habit.id}" onchange="updateSelectedCount()">`
-          : (isScheduledToday 
-              ? `<div class="checkbox-container">
-                   <input type="checkbox" class="custom-cb" ${habit.history[todayStr] ? 'checked' : ''} onchange="toggleTodayHabit(${habit.id})">
-                 </div>`
-              : `<div class="off-day-mark" title="오늘 해당 없음"></div>`);
-
-        item.innerHTML = `
-          <div class="habit-left">
-            ${cbHtml}
-            <div class="habit-info">
-              <input type="text" class="habit-name" value="${habit.name}" oninput="adjustInputWidth(this)" onchange="updateHabitName(${habit.id}, this)">
-              <span class="freq-tag">${freqText}</span>
-            </div>
-          </div>
-          <div class="streak-badge">${badgeText}</div>
-          <div class="progress-dots">${dotsHtml}</div>
-        `;
-
-        listEl.appendChild(item);
-
-        const inputEl = item.querySelector('.habit-name');
-        if (inputEl) adjustInputWidth(inputEl);
+        listEl.appendChild(categoryGroup);
       });
 
       updateSelectedCount();
